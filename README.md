@@ -245,7 +245,7 @@ public class OrderServiceImpl implements OrderService{
 - `OrderServiceImpl`은 `DiscountPolicy` 인터페이스에 의존한다. 실제 어떤 구현 객체가 사용될지는 모름
 - 의존관계는 **정적인 클래스 의존 관계와 실행 시점에는 결정되는 동적인 인스턴스 의존 관계** 둘을 분리해서 생각해야 함
 
-**정적인 클래스 의존 관계**
+**정적인 클래스 의존 관계**   
 클래스가 사용하는 `import` 코드만 보고 의존 관계를 쉽게 판단할 수 있다. 정적인 의존 관계는 애플리케이션을 실행하지 않아도 분석할 수 있다.
 
 클래스 다이어그램
@@ -255,7 +255,7 @@ public class OrderServiceImpl implements OrderService{
 - `OrderServiceImpl`은 `MemberRepository`, `DiscountPolicy`에 의존한다는 것을 알 수 있음
 - 하지만 이러한 클래스 의존 관계만으로는 실제 어떤 객체가 `OrderServiceImpl`에 주입될지 알 수 없음
 
-**동적인 객체 인스턴스 의존 관계**
+**동적인 객체 인스턴스 의존 관계**   
 애플리케이션 실행 시점에 실제 생성된 객체 인스턴스의 참조가 연결된 의존 관계
 
 객체 다이어그램
