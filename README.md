@@ -5,6 +5,7 @@
 <details>
 <summary>Table of Contents</summary>
 
+- [IntelliJ 단축키 정리](#intellij-단축키-정리)
 - [1. 회원 도메인 개발](#1-회원-도메인-개발)
   - [`코드1`의 문제점 🤔](#코드1의-문제점-)
   - [TIL 💡](#til-)
@@ -13,9 +14,30 @@
   - [`JUnit`을 이용해서 테스트 ❗️](#junit을-이용해서-테스트-️)
 - [3. 주문과 할인 도메인 개발](#3-주문과-할인-도메인-개발)
   - [`코드2`의 설계](#코드2의-설계)
+- [4. 관심사 분리](#4-관심사-분리)
+  - [좋은 객체 지향 설계의 5가지 원칙의 적용](#좋은-객체-지향-설계의-5가지-원칙의-적용)
+    - [SRP(Single Responsiblilty Principle) 🔗](#srpsingle-responsiblilty-principle-)
+    - [DIP(Dependency Inversion Principle) 🔗](#dipdependency-inversion-principle-)
+    - [OCP(Open-Closed Prinicple) 🔗](#ocpopen-closed-prinicple-)
+  - [IoC(제어의 역전), DI(의존관계 주입), 그리고 컨테이너](#ioc제어의-역전-di의존관계-주입-그리고-컨테이너)
+    - [제어의 역전(Inversion of Control, IoC) 🔗](#제어의-역전inversion-of-control-ioc-)
+    - [의존관계 주입(Dependency Injection, DI) 🔗](#의존관계-주입dependency-injection-di-)
+    - [IoC 컨테이너, DI 컨테이너 🔗](#ioc-컨테이너-di-컨테이너-)
 </details>
 
 ---
+## IntelliJ 단축키 정리
+- `⌘ + ⇧ + ⏎`
+  - 자동 완성과 동시에 `;`를 찍어줌
+- `⌘ + ⇧ + T` 
+  - 테스트 코드 자동 생성
+- `⌘ + ⌥ + V`
+  - 변수 추출
+- `⌘ + ⌥ + M`
+  - 메소드 추출
+- `⌘ + E`
+  - 최근 사용된 파일들을 볼 수 있음
+
 ## 1. 회원 도메인 개발
 ```java
 // 코드1
@@ -30,7 +52,6 @@ public class MemberServiceImpl implements MemberService{
 
 ### TIL 💡
 - `enum`은 member entity 에 구현하지 않고 새로운 파일을 만들어 구현
-- 자동 완성을 이용할 경우 `⌘` + `⇧` + `⏎` 단축키를 이용하면 `;`까지 자동으로 찍힘
 
 ## 2. 회원 도메인 실행과 테스트
 ### 애플케이션 로직을 구현 후 테스트
@@ -96,7 +117,7 @@ public interface DiscountPolicy {
     int discount(Member member, int price);
 }
 
-public class FixDiscountPolicy implements DiscountPolicy{
+public class FixDiscountPolicy implements DiscountPolicy {
 
     private int discountFixAmount = 1000;
 
@@ -111,7 +132,7 @@ public class FixDiscountPolicy implements DiscountPolicy{
 }
 
 
-public class OrderServiceImpl implements OrderService{
+public class OrderServiceImpl implements OrderService {
 
     private final MemberRepository memberRepository = new MemoryMemberRepository();
     private final DiscountPolicy discountPolicy = new FixDiscountPolicy();
@@ -121,3 +142,130 @@ public class OrderServiceImpl implements OrderService{
 - `DiscountPolicy`는 할인에 관련된 책임만 가지고 있고, `OrderService`는 주문과 관련된 책임만 가지고 있다.   
   ⇒ 각 클래스는 한 가지 책임만 가지고 있기에 **SRP**를 지키고 있다.
 - 하지만 `코드1`와 같이 확장 된다면 **OCP**, **DIP**를 위반한다.
+
+## 4. 관심사 분리
+- 기존 코드
+```java
+public class MemberServiceImpl implements MemberService {
+
+  private final MemberRepository memeberRepository = new MemboryMemberRespository();
+}
+
+public class OrderServiceImpl implements OrderService {
+
+    private final MemberRepository memberRepository = new MemoryMemberRepository();
+    private final DiscountPolicy discountPolicy = new FixDiscountPolicy();
+}
+```
+- 관심사를 분리한 코드
+```java
+// AppConfig.java
+package hello.core;
+
+import hello.core.discount.RateDiscountPolicy;
+import hello.core.member.MemberService;
+import hello.core.member.MemberServiceImpl;
+import hello.core.member.MemoryMemberRepository;
+import hello.core.order.OrderService;
+import hello.core.order.OrderServiceImpl;
+
+public class AppConfig {
+
+    public MemberService memberService() {
+        return new MemberServiceImpl(new MemoryMemberRepository());
+    }
+
+    public OrderService orderService() {
+        return new OrderServiceImpl(new MemoryMemberRepository(), new RateDiscountPolicy());
+    }
+}
+
+// MemberServiceImpl.java
+public class MemberServiceImpl implements MemberService {
+
+    private final MemberRepository memberRepository;
+
+    public MemberServiceImpl(MemberRepository memberRepository) {
+        this.memberRepository = memberRepository;
+    }
+}
+
+// OrderServiceImpl.java
+public class OrderServiceImpl implements OrderService{
+
+    private final MemberRepository memberRepository;
+    private final DiscountPolicy discountPolicy;
+
+    public OrderServiceImpl(MemberRepository memberRepository,
+        DiscountPolicy discountPolicy) {
+        this.memberRepository = memberRepository;
+        this.discountPolicy = discountPolicy;
+    }
+}
+```
+- 위와 같이 관심사를 분리하면 인터페이스는 추상화만 의존하기 때문에 **DIP**를 만족한다.
+- 만약 확장을 하더라도 의존성 주입으로 인해 **사용 영역**(클라이언트 코드)은 변경없이 **구성 역역**(`AppConfig`)만 수정하면 되므로 **OCP**를 만족한다.
+- 클라이언트 코드는 의존관계에 대한 책임을 덜고 기능에만 책임을 가진다.
+
+~~의존성 주입을 공부한 후 정리 필요~~
+
+### 좋은 객체 지향 설계의 5가지 원칙의 적용
+현재까지 **SRP**, **DIP**, **OCP** 적용
+
+#### SRP(Single Responsiblilty Principle) 🔗
+**한 클래스는 하나의 책임만 가져야 한다.**
+- 클라이언트 객체는 직접 구현 객체를 생성하고, 연결하고, 실행하는 다양한 책임을 가지고 있음
+- SRP를 따르면서 관심사를 분리
+- 구현 객체를 생성하고 연결하는 책임은 `AppConfig`가 담당
+- 클라이언트 객체는 실행하는 책임만 담당
+
+#### DIP(Dependency Inversion Principle) 🔗
+**프로그래머는 "추상화에 의존해야지, 구체화에 의존하면 안된다." 의존성 주입은 이 원칙을 따르는 방법 중 하나다.**
+- 기존 클라이언트 코드는 추상화 인터페이스에 의존하지만, 구체화 구현 클래스도 함께 의존했음
+- 관심사 분리 후 클라이언트 코드는 추상화 인터페이스에만 의존
+
+#### OCP(Open-Closed Prinicple) 🔗
+**소프트웨어 요소는 확장은 열려있고 변경에는 닫혀 있어야 한다.**
+- 다형성을 사용하고 클라이언트가 DIP를 지킴
+- 애플리케이션을 사용 영역과 구성 영역으로 나눔
+- `AppConfig`가 의존 관계를 클라이언트 코드에 주입하므로 클라이언트 코드는 변경하지 않아도 됨
+- 따라서 **소프트웨어 요소를 새롭게 확장해도 사용 역영의 변경은 닫혀있다.**
+
+### IoC(제어의 역전), DI(의존관계 주입), 그리고 컨테이너
+#### 제어의 역전(Inversion of Control, IoC) 🔗
+- 리팩토리전 프로그램은 클라이언트 구현 객체가 스스로 필요한 서버 구현 객체를 생성하고, 연결하고 실행한다. 즉, 구현 객체가 프로그램의 제어 흐름을 스스로 조종했다.
+- 관심사 분리 후 구현 객체는 자신의 로직만 수행하는 역할만 담당하고, 프로그램의 제어 흐름은 `AppConfig`가 가져간다.
+- 이렇듯 프로그램의 제어 흐름을 직접 제어하는 것이 아니라 외부에서 관리하는 것을 제어의 역전(IoC)라 한다.
+
+**프레임워크 vs 라이브러리**
+- 프레임워크가 프로그래머가 작성한 코드를 제어하고, 대신 실행하면 그것은 프레임워크다. ex) JUnit
+- 프로그래머가 작성한 코드를 직접 제어의 흐름을 담당한다면, 그것은 라이브러리다.
+
+#### 의존관계 주입(Dependency Injection, DI) 🔗
+- `OrderServiceImpl`은 `DiscountPolicy` 인터페이스에 의존한다. 실제 어떤 구현 객체가 사용될지는 모름
+- 의존관계는 **정적인 클래스 의존 관계와 실행 시점에는 결정되는 동적인 인스턴스 의존 관계** 둘을 분리해서 생각해야 함
+
+**정적인 클래스 의존 관계**
+클래스가 사용하는 `import` 코드만 보고 의존 관계를 쉽게 판단할 수 있다. 정적인 의존 관계는 애플리케이션을 실행하지 않아도 분석할 수 있다.
+
+클래스 다이어그램
+
+<img width="530" alt="image" src="https://user-images.githubusercontent.com/45463495/156312530-35a6faef-4fd8-4d86-9e67-1cc8e1d21483.png">
+
+- `OrderServiceImpl`은 `MemberRepository`, `DiscountPolicy`에 의존한다는 것을 알 수 있음
+- 하지만 이러한 클래스 의존 관계만으로는 실제 어떤 객체가 `OrderServiceImpl`에 주입될지 알 수 없음
+
+**동적인 객체 인스턴스 의존 관계**
+애플리케이션 실행 시점에 실제 생성된 객체 인스턴스의 참조가 연결된 의존 관계
+
+객체 다이어그램
+
+<img width="530" alt="image" src="https://user-images.githubusercontent.com/45463495/156313379-20e8c597-42dd-45e6-990a-f1fec811827e.png">
+
+- 애플리케이션 실행 시점에 외부에서 실제 구현 객체를 생성하고 클라이언트에 전달해서 클라이언트와 서버의 실제 의존 관계가 연결되는 것을 **의존관계 주입**이라 한다.
+- 의존관계 주입을 사용하면 클라이언트 코드를 변경하지 않고, 클라이언트가 호출하는 대상의 타입 인스턴스를 변경 가능
+- 의존관계 주입을 사용하면 **정적인 클래스 의존관계를 변경하지 않고, 동적인 객체 인스턴스 의존관계를 쉽게 변경 가능**
+
+#### IoC 컨테이너, DI 컨테이너 🔗
+- `AppConfig`처럼 객체를 생성하고 관리하면서 의존관계를 연결해주는 것을 IoC 컨테이너, **DI 컨테이너**라 한다.
+- 의존관계 주입에 초점을 맞춰 최근에는 주로 DI 컨테이너라 한다.
