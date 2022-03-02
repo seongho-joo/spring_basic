@@ -11,6 +11,8 @@
 - [2. 회원 도메인 실행과 테스트](#2-회원-도메인-실행과-테스트)
   - [애플케이션 로직을 구현 후 테스트](#애플케이션-로직을-구현-후-테스트)
   - [`JUnit`을 이용해서 테스트 ❗️](#junit을-이용해서-테스트-️)
+- [3. 주문과 할인 도메인 개발](#3-주문과-할인-도메인-개발)
+  - [`코드2`의 설계](#코드2의-설계)
 </details>
 
 ---
@@ -82,3 +84,40 @@ public class MemberServiceTest {
   - `assertThat`과 `isEqualTo`가 다르거나 오류가 발생한다면 Run 창에 빨간불이 들어온다
   
 ~~Clean Code 에서 다루는 단위 테스트에 대한 내용을 다시 읽어봐야겠다.~~
+
+## 3. 주문과 할인 도메인 개발
+```java
+// 코드2
+public interface DiscountPolicy {
+
+    /**
+     * @return 할인 대상 금액
+     */
+    int discount(Member member, int price);
+}
+
+public class FixDiscountPolicy implements DiscountPolicy{
+
+    private int discountFixAmount = 1000;
+
+    @Override
+    public int discount(Member member, int price) {
+        if (member.getGrade() == Grade.VIP) {
+            return discountFixAmount;
+        } else {
+            return 0;
+        }
+    }
+}
+
+
+public class OrderServiceImpl implements OrderService{
+
+    private final MemberRepository memberRepository = new MemoryMemberRepository();
+    private final DiscountPolicy discountPolicy = new FixDiscountPolicy();
+}
+```
+### `코드2`의 설계
+- `DiscountPolicy`는 할인에 관련된 책임만 가지고 있고, `OrderService`는 주문과 관련된 책임만 가지고 있다.   
+  ⇒ 각 클래스는 한 가지 책임만 가지고 있기에 **SRP**를 지키고 있다.
+- 하지만 `코드1`와 같이 확장 된다면 **OCP**, **DIP**를 위반한다.
