@@ -25,6 +25,8 @@
     - [IoC 컨테이너, DI 컨테이너 🔗](#ioc-컨테이너-di-컨테이너-)
 - [5. 스프링으로 전환](#5-스프링으로-전환)
   - [스프링 컨테이너](#스프링-컨테이너)
+  - [BeanFactory와 ApplicationContext](#beanfactory와-applicationcontext)
+  - [스프링 빈 설정 메타 정보 - BeanDefinition](#스프링-빈-설정-메타-정보---beandefinition)
 </details>
 
 ---
@@ -445,3 +447,35 @@ static class SameBeanConfig {
 - 동일한 타입이 두 개이상일 경우
   - `getBeansOfType()` 사용
     - 해당 타입에 모든 빈을 조회할 수 있음
+
+### BeanFactory와 ApplicationContext
+![](https://user-images.githubusercontent.com/45463495/156716543-dc4f4b08-2668-4bea-8be8-a0a6233f7408.png)
+
+**BeanFactory**
+- 스프링 컨테이너의 최상위 인터페이스
+- 스프링 빈을 관리하고 조회하는 역할 담당
+- `getBean()` 제공
+
+**AppplicationContext**
+- BeanFactory 기능을 모두 상속받아서 제공
+- 애플리케이션을 개발할 때는 빈을 관리하고 조회하는 기능은 물론이고, 수 많은 부가기능이 필요
+- AppplicationContext가 제공하는 부가기능
+  - 메시지소스를 활요한 국제화 기능
+    - ex) 한국에서 들어오면 한국어, 영어권에서 들어오면 영어로 출력
+  - 환경변수
+    - 로컬, 개발, 운영들을 구분해서 처리
+  - 애플리케이션 이벤트
+    - 이벤트를 발행하고 구독하는 모델을 편리하게 지원
+  - 편리한 리소스 조회
+    - 파일, 클래스패스, 외부 등에서 리소스를 편리하게 조회
+
+### 스프링 빈 설정 메타 정보 - BeanDefinition
+**BeanDefinition** 정보
+- BeanClassName : 생성할 빈의 클래스 명
+- factoryBeanName : 팩토리 역할의 빈을 사용할 경우 이름
+- factoryMethodName: 빈을 생성할 팩토리 메서드 지정
+- Scope : 싱글톤(기본 값)
+- lazyInt : 스프링 컨테이너를 생성할 때 빈을 생성하는 것이 아니라, 실제 빈을 사용할 때까지 최대한 생성을 지연처리 하는 지 여부
+- InitMethodName : 빈을 생성하고, 의존관계를 적용한 뒤에 호출되는 초기화 메서드 명
+- DestoryMethodName : 빈의 생명주기가 끝나서 제거하기 직전에 호출되는 메서드 명
+- Constructor arguments, Properties : 의존관계 주입에서 사용
