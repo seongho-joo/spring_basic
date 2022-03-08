@@ -27,6 +27,11 @@
   - [스프링 컨테이너](#스프링-컨테이너)
   - [BeanFactory와 ApplicationContext](#beanfactory와-applicationcontext)
   - [스프링 빈 설정 메타 정보 - BeanDefinition](#스프링-빈-설정-메타-정보---beandefinition)
+- [6. 싱글톤 컨테이너](#6-싱글톤-컨테이너)
+  - [순수한 DI 컨테이너](#순수한-di-컨테이너)
+  - [싱글톤 패턴](#싱글톤-패턴)
+  - [싱글톤 컨테이너](#싱글톤-컨테이너)
+  - [싱글톤 방식의 주의점](#싱글톤-방식의-주의점)
 </details>
 
 ---
@@ -479,3 +484,97 @@ static class SameBeanConfig {
 - InitMethodName : 빈을 생성하고, 의존관계를 적용한 뒤에 호출되는 초기화 메서드 명
 - DestoryMethodName : 빈의 생명주기가 끝나서 제거하기 직전에 호출되는 메서드 명
 - Constructor arguments, Properties : 의존관계 주입에서 사용
+
+## 6. 싱글톤 컨테이너
+### 순수한 DI 컨테이너
+<img width="538" alt="image" src="https://user-images.githubusercontent.com/45463495/156974101-08e832ed-cfda-421c-8919-3d151fd8bf3f.png">
+
+- 고객이 요청을 할 때마다 객체를 새로 생성함 -> 메모리 낭비가 심함
+
+### 싱글톤 패턴
+- 클래스의 인스턴스가 딱 1개만 생성되는 것을 보장하는 디자인 패턴
+- 싱글톤 패턴의 단점
+  - 구현하는 코드 자체가 많이 들어감
+  - 의존관계상 클라이언트가 구체 클래스의 의존 -> DIP 위반, OCP 위반할 가능성이 높음
+  - 테스트가 어려움
+  - 내부 속성을 변경하거나 초기화가 어려움
+  - private 생성자로 자식 클래스를 만들기 어려움
+  - 유연성이 떨어짐
+
+### 싱글톤 컨테이너
+- 싱글톤 패턴을 적용하지 않아도 객체 인스턴스를 싱글톤으로 관리
+
+**싱글톤 컨테이너 적용 후**   
+<img width="538" alt="image" src="https://user-images.githubusercontent.com/45463495/156974175-b450142e-6803-4a1b-974c-74d2292fa69f.png">
+
+- 스프링 컨테이너 덕분에 고객이 요청이 올 때 마다 객체를 생성하는 것이 아니라, 이미 만들어진 객체를 공유해서 효율적으로 재사용할 수 있음
+
+### 싱글톤 방식의 주의점
+- 객체 인스턴스를 하나만 생성해서 공유하는 싱글톤 방식은 여러 클라이언트가 하나의 같은 객체 인스턴스를 공유하기 때문에 싱글톤 객체는 상태를 유지하게 설계하면 안된다.
+- 무상태로 설계해야 한다.
+  - 특정 클라이언트에 의존적인 필드가 있으면 안됨
+  - 특정 클라이언트가 값을 변경할 수 있는 필드가 있으면 안됨
+  - 가급적 읽기만 가능해야 함
+  - 필드 대신 자바에서 공유되지 않는 지역변수, 파라미터, ThreadLocal 등을 사용
+- 스프링 빈의 필드에 공유 값을 설정하면 큰 장애가 발생할 수 있음
+
+**예시**
+```java
+package hello.core.singleton;
+
+public class StateFulService {
+
+    private int price; // 상태를 유지하는 필드
+
+    public void order(String name, int price) {
+        System.out.println("name = " + name + " price = " + price);
+        this.price = price; // 여기가 문제
+    }
+
+    public int getPrice() {
+        return price;
+    }
+}
+
+
+package hello.core.singleton;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.Bean;
+
+class StateFulServiceTest {
+
+    @Test
+    void stateFulServiceSingleton() {
+        ApplicationContext ac = new AnnotationConfigApplicationContext(TestConfig.class);
+
+        StateFulService stateFulService1 = ac.getBean(StateFulService.class);
+        StateFulService stateFulService2 = ac.getBean(StateFulService.class);
+
+
+        // ThreadA: A 사용자 1000원 주문
+        stateFulService1.order("userA", 1000);
+        // ThreadB: B 사용자 2000원 주문
+        stateFulService2.order("userB", 2000);
+
+        // ThreadA: 사용자 A 주문 금액 조회
+        int price = stateFulService1.getPrice();
+        System.out.println("price = " + price);
+
+        assertThat(stateFulService1.getPrice()).isEqualTo(2000);
+    }
+
+    static class TestConfig {
+
+        @Bean
+        public StateFulService stateFulService() {
+            return new StateFulService();
+        }
+    }
+}
+```
