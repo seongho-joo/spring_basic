@@ -32,6 +32,15 @@
   - [싱글톤 패턴](#싱글톤-패턴)
   - [싱글톤 컨테이너](#싱글톤-컨테이너)
   - [싱글톤 방식의 주의점](#싱글톤-방식의-주의점)
+- [8. 의존관계 자동 주입](#8-의존관계-자동-주입)
+  - [다양한 의존관계 주입 방법](#다양한-의존관계-주입-방법)
+    - [생성자 주입](#생성자-주입)
+    - [수정자 주입(Setter 주입)](#수정자-주입setter-주입)
+    - [필드 주입](#필드-주입)
+    - [일반 메서드 주입](#일반-메서드-주입)
+  - [옵션처리](#옵션처리)
+  - [조회 빈이 2개 이상 - 문제](#조회-빈이-2개-이상---문제)
+  - [조회한 빈이 모두 필요할 때](#조회한-빈이-모두-필요할-때)
 </details>
 
 ---
@@ -574,6 +583,210 @@ class StateFulServiceTest {
         @Bean
         public StateFulService stateFulService() {
             return new StateFulService();
+        }
+    }
+}
+```
+
+## 8. 의존관계 자동 주입
+### 다양한 의존관계 주입 방법
+- 생성자 주입
+- 수정자 주입(setter 주입)
+- 필드 주입
+- 일반 메서드 주입
+
+#### 생성자 주입
+- 생성자를 통해서 의존 관계를 주입하는 방법
+- 생성자 호출 시점에 딱 1번만 호출되는 것이 보장됨
+- **불변**, **필수** 의존관계에 사용
+- 생성자가 하나만 있다면 `@Autowired` 생략 가능
+```java
+@Component
+public class OrderServiceImpl implements OrderService {
+    private final MemberRepository memberRepository;
+    private final DiscountPolicy discountPolicy;
+    
+    @Autowired
+    public OrderServiceImpl(MemberRepository memberRepository, DiscountPolicy discountPolicy) {
+        this.memberRepository = memberRepository;
+        this.discountPolicy = discountPolicy;
+    }
+}
+```
+
+#### 수정자 주입(Setter 주입)
+- setter라 불리는 필드의 값을 변경하는 수정자 메서드를 통새서 의존관계를 주입하는 방법
+- **선택**, **변경** 가능성이 있는 의존관계에 사용
+- 자바빈 프로퍼티 규약의 수정자 메서드 방식을 사용하는 방법
+```java
+@Component
+public class OrderServiceImpl implements OrderService {
+  
+    private MemberRepository memberRepository;
+    private DiscountPolicy discountPolicy;
+
+    @Autowired
+    public void setMemberRepository(MemberRepository memberRepository) {
+        this.memberRepository = memberRepository;
+    }
+
+    @Autowired
+    public void setDiscountPolicy(DiscountPolicy discountPolicy) {
+        this.discountPolicy = discountPolicy;
+    }
+}
+```
+
+#### 필드 주입
+- 필드에 바로 주입하는 방법
+- 외부에서 변경이 불가능하므로 테스트 하기 힘듦
+- DI 프레임워크가 없으면 아무것도 할 수 없음
+- 사용 용도
+  - 애플리케이션의 실제 코드와 관계 없는 테스트 코드
+  - 스프링 설정을 목적으로 하는 `@Configuration` 같은 곳에서만 특별한 용도로 사용
+
+```java
+@Component
+public class OrderServiceImpl implements OrderService {
+    
+    @Autowired
+    private MemberRepository memberRepository;
+    
+    @Autowired
+    private DiscountPolicy discountPolicy;
+  }
+```
+
+#### 일반 메서드 주입
+- 일반 메서드를 통해서 주입
+- 한번에 여러 필드를 주입 받을 수 있음
+- 일반적으로 잘 사용하지 않음
+
+```java
+@Component
+public class OrderServiceImpl implements OrderService {
+
+    private MemberRepository memberRepository;
+    private DiscountPolicy discountPolicy;
+    
+    @Autowired
+    public void init(MemberRepository memberRepository, DiscountPolicy discountPolicy) {
+        this.memberRepository = memberRepository;
+        this.discountPolicy = discountPolicy;
+    }
+}
+```
+
+### 옵션처리
+주입할 스프링 빈이 없어도 동작해야 할 때가 있을 때 `@Autowired`만 사용하면 `required` 옵션의 기본 값이 `true`로 되어 있어 자동 주입 대상이 없으면 오류가 발생한다.
+
+자동 주입 대상을 옵션으로 처리하는 방법
+- `@Autowired(required=false)`: 자동 주입할 대상이 없으면 수정자 메서드 자체가 호출 안됨
+- `@Nullable`: 자동 주입할 대상이 없으면 null이 입력됨
+- `Optional<>`: 자동 주입할 대상이 없으면 `Optional.empty`가 입력됨
+
+**정리**
+- 생성자 주입 방식을 선택하는 이유는 여러가지가 있지만, 프레임워크에 의존하지 않고, 순수한 자바 언어의 특징을 잘 살리는 방법
+- 기본으로 생성자 주입을 사용하고, 필수 값이 아닌 경우는 수정자 주입 방식을 옵션으로 부여
+  - 생성자 주입과 수정자 주입 동시 사용 가능
+- 항상 생성자 주입을 선택
+
+**Lombok**
+```gradle
+//lombok 설정 추가 시작
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+}
+//lombok 설정 추가 끝
+
+//lombok 라이브러리 추가 시작
+compileOnly 'org.projectlombok:lombok'
+annotationProcessor 'org.projectlombok:lombok'
+
+testCompileOnly 'org.projectlombok:lombok'
+testAnnotationProcessor 'org.projectlombok:lombok'
+//lombok 라이브러리 추가 끝
+```
+라이브러리 적용 방법
+1. Preferneces -> plugin -> lombok 검색 설치 실행
+2. Preferneces -> Annotation Processors 검색 -> Enable annotation processing 체크
+
+**Lombok을 적용한 코드**
+```java
+@Component
+@RequiredArgsConstructor
+public class OrderServiceImpl implements OrderService{
+
+    private final MemberRepository memberRepository;
+    private final DiscountPolicy discountPolicy;
+}
+```
+
+### 조회 빈이 2개 이상 - 문제
+`@Autowired`는 타입으로 조회한다. 타입으로 조회하면 선택된 빈이 2개 이상일 때 문제가 발생한다.   
+`DiscountPolicy`의 하위 타입인 `FixDiscountPolicy`, `RateDiscountPolicy` 둘 다 스프링 빈으로 선언하면 `NoUniqueBeanDefinitionException` 오류가 발생한다.
+
+**해결 방법**
+- `@Autowired` 필드 명 매칭
+  - `@Autowired`는 타입 매칭을 시도하고, 이때 여러 빈이 있으면 필드 이름, 파라미터 이름으로 빈 이름을 추가 매칭한다.
+- `@Qualifier` 사용
+  - 추가 구분자를 붙여주는 방법
+- `@Primary`
+  - 우선순위를 정하는 방법
+
+### 조회한 빈이 모두 필요할 때
+```java
+package hello.core.autowired;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import hello.core.AutoAppConfig;
+import hello.core.discount.DiscountPolicy;
+import hello.core.member.Grade;
+import hello.core.member.Member;
+import java.util.List;
+import java.util.Map;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+
+public class AllBeanTest {
+
+    @Test
+    void findAllBean() {
+        ApplicationContext ac = new AnnotationConfigApplicationContext(AutoAppConfig.class, DiscountService.class);
+
+        DiscountService discountService = ac.getBean(DiscountService.class);
+        Member member = new Member(1L, "userA", Grade.VIP);
+        int discountPrice1 = discountService.discount(member, 10000, "fixDiscountPolicy");
+
+        assertThat(discountService).isInstanceOf(DiscountService.class);
+        assertThat(discountPrice1).isEqualTo(1000);
+
+        int discountPrice2 = discountService.discount(member, 20000, "rateDiscountPolicy");
+        assertThat(discountPrice2).isEqualTo(2000);
+    }
+
+    static class DiscountService {
+        private final Map<String, DiscountPolicy> policyMap;
+        private final List<DiscountPolicy> policies;
+
+        @Autowired
+        public DiscountService(
+            Map<String, DiscountPolicy> policyMap,
+            List<DiscountPolicy> policies) {
+            this.policyMap = policyMap;
+            this.policies = policies;
+            System.out.println("policyMap = " + policyMap);
+            System.out.println("policies = " + policies);
+        }
+
+        public int discount(Member member, int price, String discountCode) {
+            DiscountPolicy discountPolicy = policyMap.get(discountCode);
+            return discountPolicy.discount(member, price);
         }
     }
 }
