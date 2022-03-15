@@ -16,9 +16,9 @@
   - [`코드2`의 설계](#코드2의-설계)
 - [4. 관심사 분리](#4-관심사-분리)
   - [좋은 객체 지향 설계의 5가지 원칙의 적용](#좋은-객체-지향-설계의-5가지-원칙의-적용)
-    - [SRP(Single Responsiblilty Principle) 🔗](#srpsingle-responsiblilty-principle-)
+    - [SRP(Single Responsibility Principle) 🔗](#srpsingle-responsiblilty-principle-)
     - [DIP(Dependency Inversion Principle) 🔗](#dipdependency-inversion-principle-)
-    - [OCP(Open-Closed Prinicple) 🔗](#ocpopen-closed-prinicple-)
+    - [OCP(Open-Closed Principle) 🔗](#ocpopen-closed-prinicple-)
   - [IoC(제어의 역전), DI(의존관계 주입), 그리고 컨테이너](#ioc제어의-역전-di의존관계-주입-그리고-컨테이너)
     - [제어의 역전(Inversion of Control, IoC) 🔗](#제어의-역전inversion-of-control-ioc-)
     - [의존관계 주입(Dependency Injection, DI) 🔗](#의존관계-주입dependency-injection-di-)
@@ -42,6 +42,8 @@
   - [조회 빈이 2개 이상 - 문제](#조회-빈이-2개-이상---문제)
   - [조회한 빈이 모두 필요할 때](#조회한-빈이-모두-필요할-때)
 - [9. 빈 생명주기 콜백](#9-빈-생명주기-콜백)
+- [10. 빈 스코프](#10-빈-스코프)
+  - [프로토타입 스코프](#프로토타입-스코프)
 </details>
 
 ---
@@ -170,7 +172,7 @@ public class OrderServiceImpl implements OrderService {
 ```java
 public class MemberServiceImpl implements MemberService {
 
-  private final MemberRepository memeberRepository = new MemboryMemberRespository();
+  private final MemberRepository memberRepository = new MemboryMemberRespository();
 }
 
 public class OrderServiceImpl implements OrderService {
@@ -234,7 +236,7 @@ public class OrderServiceImpl implements OrderService{
 ### 좋은 객체 지향 설계의 5가지 원칙의 적용
 현재까지 **SRP**, **DIP**, **OCP** 적용
 
-#### SRP(Single Responsiblilty Principle) 🔗
+#### SRP(Single Responsibility Principle) 🔗
 **한 클래스는 하나의 책임만 가져야 한다.**
 - 클라이언트 객체는 직접 구현 객체를 생성하고, 연결하고, 실행하는 다양한 책임을 가지고 있음
 - SRP를 따르면서 관심사를 분리
@@ -246,7 +248,7 @@ public class OrderServiceImpl implements OrderService{
 - 기존 클라이언트 코드는 추상화 인터페이스에 의존하지만, 구체화 구현 클래스도 함께 의존했음
 - 관심사 분리 후 클라이언트 코드는 추상화 인터페이스에만 의존
 
-#### OCP(Open-Closed Prinicple) 🔗
+#### OCP(Open-Closed Principle) 🔗
 **소프트웨어 요소는 확장은 열려있고 변경에는 닫혀 있어야 한다.**
 - 다형성을 사용하고 클라이언트가 DIP를 지킴
 - 애플리케이션을 사용 영역과 구성 영역으로 나눔
@@ -331,7 +333,7 @@ public class AppConfig {
 **스프링 컨테이너의 생성 과정**
 
 1. 스프링 컨테이너 생성
-```java
+```
 ApplicationContext applicationContext = new AnnotationConfigApplicationContext(AppConfig.class);
 ```
 - 스프링 컨테이너를 생성할 때는 구성 정보를 지정해주어야 함
@@ -355,100 +357,103 @@ ApplicationContext applicationContext = new AnnotationConfigApplicationContext(A
 
 **컨테이너에 등록된 모든 빈 조회**
 ```java
-AnnotationConfigApplicationContext ac = new AnnotationConfigApplicationContext(AppConfig.class);
+public class BeanFind {
 
-@Test
-@DisplayName("모든 빈 출력")
-void findAllBean() {
+  AnnotationConfigApplicationContext ac = new AnnotationConfigApplicationContext(AppConfig.class);
+
+  @Test
+  @DisplayName("모든 빈 출력")
+  void findAllBean() {
     String[] beanDefinitionNames = ac.getBeanDefinitionNames();
     for (String beanDefinitionName : beanDefinitionNames) {
+      Object bean = ac.getBean(beanDefinitionName);
+      System.out.println("name = " + beanDefinitionName + " Object = " + bean);
+    }
+  }
+
+  @Test
+  @DisplayName("애플리케이션 빈 출력")
+  void findApplicationBean() {
+    String[] beanDefinitionNames = ac.getBeanDefinitionNames();
+    for (String beanDefinitionName : beanDefinitionNames) {
+      BeanDefinition beanDefinition = ac.getBeanDefinition(beanDefinitionName);
+
+      if (beanDefinition.getRole() == BeanDefinition.ROLE_APPLICATION) {
         Object bean = ac.getBean(beanDefinitionName);
         System.out.println("name = " + beanDefinitionName + " Object = " + bean);
+      }
     }
-}
+  }
 
-@Test
-@DisplayName("애플리케이션 빈 출력")
-void findApplicationBean() {
-    String[] beanDefinitionNames = ac.getBeanDefinitionNames();
-    for (String beanDefinitionName : beanDefinitionNames) {
-        BeanDefinition beanDefinition = ac.getBeanDefinition(beanDefinitionName);
-
-        if (beanDefinition.getRole() == BeanDefinition.ROLE_APPLICATION) {
-            Object bean = ac.getBean(beanDefinitionName);
-            System.out.println("name = " + beanDefinitionName + " Object = " + bean);
-        }
-    }
-}
-
-@Test
-@DisplayName("빈 이름을 조회")
-void findBeanByName() {
+  @Test
+  @DisplayName("빈 이름을 조회")
+  void findBeanByName() {
     MemberService memberService = ac.getBean("memberService", MemberService.class);
     assertThat(memberService).isInstanceOf(MemberServiceImpl.class);
-}
+  }
 
-@Test
-@DisplayName("타입으로만 조회")
-void findBeanByType() {
+  @Test
+  @DisplayName("타입으로만 조회")
+  void findBeanByType() {
     MemberService memberService = ac.getBean(MemberService.class);
     assertThat(memberService).isInstanceOf(MemberServiceImpl.class);
-}
+  }
 
-@Test
-@DisplayName("구체 타입으로 조회")
-void findBeanByName2() {
+  @Test
+  @DisplayName("구체 타입으로 조회")
+  void findBeanByName2() {
     MemberService memberService = ac.getBean("memberService", MemberServiceImpl.class);
     assertThat(memberService).isInstanceOf(MemberServiceImpl.class);
-}
+  }
 
-@Test
-@DisplayName("빈 이름으로 조회X")
-void findBeanByNameX() {
+  @Test
+  @DisplayName("빈 이름으로 조회X")
+  void findBeanByNameX() {
     // MemberService xxx = ac.getBean("xxx", MemberService.class);
     assertThrows(NoSuchBeanDefinitionException.class,
-        () -> ac.getBean("xxx", MemberService.class));
-}
+            () -> ac.getBean("xxx", MemberService.class));
+  }
 
-@Test
-@DisplayName("타입으로 조회 시 같은 타입이 둘 이상 있으면, 중복 오류 발생")
-void findBeanByTypeDuplicate() {
+  @Test
+  @DisplayName("타입으로 조회 시 같은 타입이 둘 이상 있으면, 중복 오류 발생")
+  void findBeanByTypeDuplicate() {
 //        ac.getBean(MemberRepository.class);
     assertThrows(NoUniqueBeanDefinitionException.class, () -> ac.getBean(MemberRepository.class));
-}
+  }
 
-@Test
-@DisplayName("타입으로 조회 시 같은 타입이 둘 이상 있으면, 빈 이름을 지정하면 된다")
-void findBeanByName() {
+  @Test
+  @DisplayName("타입으로 조회 시 같은 타입이 둘 이상 있으면, 빈 이름을 지정하면 된다")
+  void findBeanByName() {
     MemberRepository memberRepository = ac.getBean("memberRepository1",
-        MemberRepository.class);
+            MemberRepository.class);
     assertThat(memberRepository).isInstanceOf(MemberRepository.class);
-}
+  }
 
-@Test
-@DisplayName("특정 타입 모두 조회하기")
-void findAllBeanByType() {
+  @Test
+  @DisplayName("특정 타입 모두 조회하기")
+  void findAllBeanByType() {
     Map<String, MemberRepository> beansOfType = ac.getBeansOfType(MemberRepository.class);
     for (String key : beansOfType.keySet()) {
-        System.out.println("key = " + key + " value = " + beansOfType.get(key));
+      System.out.println("key = " + key + " value = " + beansOfType.get(key));
     }
     System.out.println("beansOfType = " + beansOfType);
     assertThat(beansOfType.size()).isEqualTo(2);
-}
+  }
 
-@Configuration
-static class SameBeanConfig {
+  @Configuration
+  static class SameBeanConfig {
 
     @Bean
     public MemberRepository memberRepository1() {
-        return new MemoryMemberRepository();
+      return new MemoryMemberRepository();
     }
 
     @Bean
     public MemberRepository memberRepository2() {
-        return new MemoryMemberRepository();
+      return new MemoryMemberRepository();
     }
 
+  }
 }
 ```
 - 모든 빈 출력
@@ -471,10 +476,10 @@ static class SameBeanConfig {
 - 스프링 빈을 관리하고 조회하는 역할 담당
 - `getBean()` 제공
 
-**AppplicationContext**
+**ApplicationContext**
 - BeanFactory 기능을 모두 상속받아서 제공
 - 애플리케이션을 개발할 때는 빈을 관리하고 조회하는 기능은 물론이고, 수 많은 부가기능이 필요
-- AppplicationContext가 제공하는 부가기능
+- ApplicationContext가 제공하는 부가기능
   - 메시지소스를 활요한 국제화 기능
     - ex) 한국에서 들어오면 한국어, 영어권에서 들어오면 영어로 출력
   - 환경변수
@@ -492,7 +497,7 @@ static class SameBeanConfig {
 - Scope : 싱글톤(기본 값)
 - lazyInt : 스프링 컨테이너를 생성할 때 빈을 생성하는 것이 아니라, 실제 빈을 사용할 때까지 최대한 생성을 지연처리 하는 지 여부
 - InitMethodName : 빈을 생성하고, 의존관계를 적용한 뒤에 호출되는 초기화 메서드 명
-- DestoryMethodName : 빈의 생명주기가 끝나서 제거하기 직전에 호출되는 메서드 명
+- DestroyMethodName : 빈의 생명주기가 끝나서 제거하기 직전에 호출되는 메서드 명
 - Constructor arguments, Properties : 의존관계 주입에서 사용
 
 ## 6. 싱글톤 컨테이너
@@ -545,8 +550,8 @@ public class StateFulService {
         return price;
     }
 }
-
-
+```
+```java
 package hello.core.singleton;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -711,8 +716,8 @@ testAnnotationProcessor 'org.projectlombok:lombok'
 //lombok 라이브러리 추가 끝
 ```
 라이브러리 적용 방법
-1. Preferneces -> plugin -> lombok 검색 설치 실행
-2. Preferneces -> Annotation Processors 검색 -> Enable annotation processing 체크
+1. Preferences -> plugin -> lombok 검색 설치 실행
+2. Preferences -> Annotation Processors 검색 -> Enable annotation processing 체크
 
 **Lombok을 적용한 코드**
 ```java
@@ -826,3 +831,156 @@ public class AllBeanTest {
 - `@PostConstruct`, `@PreDestroy`
   - 자바 표준이기때문에 스프링에 종속적이지 않음
   - 외부 라이브러리에는 적용을하지 못함
+
+## 10. 빈 스코프
+빈이 존재할 수 있는 범위를 뜻함
+
+**스코프 종류**
+- **싱글톤**: 기본 스코프, 스프링 컨테이너의 시작과 종료까지 유지되는 가장 넓은 범위의 스코프
+- **프로토타입**: 스프링 컨테이너는 프로토타입 빈의 생성과 의존관계 주입까지만 관여하고 더는 관리하지 않는 매우 짧은 범위의 스코프
+- 웹 관련 스코프
+  - **request**: 웹 요청이 들어오고 나갈 때까지 유지되는 스코프
+  - **session**: 웹 세션이 생성되고 종료될 때까지 유지되는 스코프
+  - **application**: 웹의 서블릿 컨텍스트와 같은 범위로 유지되는 스코프
+
+### 프로토타입 스코프
+싱글톤 스코프의 빈을 조회하면 스프링 컨테이너는 항상 같은 인스턴스의 스프링 빈을 반환한다. 반면에 프로토타입 스코프를 스프링 컨테이너에 조회하면 스프링 컨테이너는 항상 새로운 인스턴스를 생성해서 반환한다.
+
+**싱글톤 빈 요청**   
+<img width="538" alt="image" src="https://user-images.githubusercontent.com/45463495/158382920-9a58628f-4ab5-497f-a248-89cd7f956bac.png">
+
+1. 싱글톤 스코프의 빈을 스프링 컨테이너에 요청
+2. 스프링 컨테이너는 본인이 관리하는 스프링 빈을 반환
+3. 이후 스프링 컨테이너에 같은 요청이 와도 같은 객체 인스턴스의 스프링 빈을 반환
+
+**프로토타입 빈 요청**   
+<img width="538" alt="image" src="https://user-images.githubusercontent.com/45463495/158383276-0ff845fd-f1ed-4fd9-8962-bad1c3726b25.png">
+
+1. 프로토타입 스코프의 빈을 스프링 컨테이너에 요청
+2. 스프링 컨테이너는 이 시점에 프로토타입 빈을 생성하고, 필요한 의존관계를 주입
+
+<img width="538" alt="image" src="https://user-images.githubusercontent.com/45463495/158383500-0247aab4-76d1-4957-b9e6-74e109d9fbec.png">
+
+3. 스프링 컨테이너는 생성한 프로토타입 빈을 클라이언트에게 반환
+4. 이후 스프링 컨테이너에 같은 요청이 오면 항상 새로운 프로토타입 빈을 생성해서 반환
+
+**프로토타입 빈의 특징 정리**
+- 스프링 컨테이너에 요청할 때마다 새로 생성됨
+- 스프링 컨테이너는 프로토타입 빈의 생성과 의존관계 주입 그리고 초기화까지만 관여함
+- `@PreDestory`같은 종료 메서드가 호출되지 않음
+- 프로토타입 빈은 프로토타입 빈을 조회한 클라이언트가 관리해야 하고 종료 메서드에 대한 호출도 클라이언트가 직접 해야함
+
+#### 싱글톤 빈에서 프로토타입 빈 사용
+<img width="538" alt="image" src="https://user-images.githubusercontent.com/45463495/158385976-c3848b03-2f1a-46be-82ba-6ce542fc5c92.png">
+
+- `clientBean`은 싱글톤이므로, 보통 스프링 컨테이너 생성 시점에 함께 생성되고, 의존관계 주입도 발생한다.
+- `clinetBean`은 프로토타입 빈을 내부 필드에 보관한다.
+
+<img width="538" alt="image" src="https://user-images.githubusercontent.com/45463495/158386665-fd017eb6-7aa3-41f8-ae98-04f69b55b21c.png">
+
+- 클라이언트 A는 `clientBean`을 스프링 컨테이너에 요청해서 받는다. 싱글톤이므로 항상 같은 `clientBean`이 반환된다.
+
+<img width="538" alt="image" src="https://user-images.githubusercontent.com/45463495/158387215-ffaaba10-5c2a-4164-a1cf-dac00317713f.png">
+
+- 클라이언트 B는 `clientBean`을 스프링 컨테이너에 요청해서 받는다. 싱글톤이므로 항상 객체 인스턴스가 반환된다.
+- `clientBean`이 내부에 가지고 있는 프로토타입 빈은 이미 과거에 주입이 끝난 빈이기 때문에 사용할 때마다 새로 생성되지 않는다.
+
+**문제점**  
+- 각 클라이언트는 같은 인스턴스를 반환받기 때문에 count는 1이 아닌 2가 반한된다.
+
+**해결 방법**
+1. 스프링 컨테이너에 요청
+```java
+@Scope("singleton")
+@RequiredArgsConstructor
+static class ClientBean {
+
+  @Autowired
+  private ApplicationContext ac;
+
+  public int logic() {
+    PrototypeBean prototypeBean = ac.getBean(Prototybean.class);
+    prototypeBean.addCount();
+    return prototypeBean.getCount();
+  }
+}
+```
+- 의존관계를 외부에서 주입 받는게 아니라 직접 필요한 의존관계를 찾은 것을 의존관계 조회(Dependency Lookup, DL)라 한다.
+- 위 코드같이 스프링의 `ApplicationContext` 전체를 주입받게 되면, 스프링 컨테이너에 종속적인 코드가 되고, 단위 테스트도 어려워진다.
+
+2. ObjectProvider
+```java
+@Scope("singleton")
+@RequiredArgsConstructor 
+static class ClientBean {
+
+  private final ObjectProvider<PrototypeBean> prototypeBeanProvider;
+
+  public int logic() {
+    PrototypeBean prototypeBean = prototypeBeanProvider.getObject();
+    prototypeBean.addCount();
+    return prototypeBean.getCount();
+  }
+}
+```
+- `prototypeBeanProvider.getObject()`을 통해서 항상 새로운 프로토타입 빈이 생성됨
+- `ObjectProvider`의 `getOjbect()`를 호출하면 내부에서 스프링 컨테이너를 통해 해당 빈을 찾아서 반환한다.(DL)
+- 스프링이 제공하는 기능을 사용
+- 기능이 단순하므로 단위테스트를 만들거나 mock 코드를 만들기가 쉬움
+
+**ObjectFactory vs ObjectProvider**
+- ObjectFactory: 기능이 단순, 별도의 라이브러리 필요 없음, 스프링에 의존
+- ObjectProvider: ObjectFactory 상속, 옵션과 스트림 처리등 편의 기능이 많고 별도의 라이브러리 필요 없음, 스프링에 의존
+
+3. JSR-330 Provider
+```java
+@Scope("singleton")
+@RequiredArgsConstructor 
+static class ClientBean {
+
+  private final Provider<PrototypeBean> provider;
+
+  public int logic() {
+    PrototypeBean prototypeBean = provider.get();
+    prototypeBean.addCount();
+    return prototypeBean.getCount();
+  }
+}
+```
+- `javax.inject:javax.inject:1` 라이브러리를 `build.gradle`에 추가해야 함
+- 자바 표준
+- ObjectProvider의 특징과같음
+
+### 웹 스코프
+웹 환경에서만 동작하고 스프링이 해당 스코프의 종료시점까지 관리한다. 따라서 종료 메서드가 호출됨
+
+**웹 스코프 종류**
+- **request**: HTTP 요청 하나가 들어어고 나갈 때까지 유지되는 스코프, 각각의 HTTP 요청마다 별도의 빈 인스턴스가 생성되고, 관리된다.
+- **session**: HTTP Session과 동일한 생명주기를 가지는 스코프
+- **application**: ServletContext와 동일한 생명주기를 가지는 스코프
+- **websocket**: 웹 소켓과 동일한 생명주기를 가지는 스코프
+
+**HTTP request 요청 당 각각 할당되는 Request 스코프**   
+<img width="538" alt="image" src="https://user-images.githubusercontent.com/45463495/158393438-426777c1-082d-4b1b-b02c-3b2367a690be.png">
+
+**스코프와 프록시**
+```java
+@Component
+@Scope(value = "request", proxyMode = ScopedProxyMode.TARGET_CLASS)
+public class MyLogger {
+    
+}
+```
+- MyLogger의 가짜 프록시 클래스를 만들고 HTTP request와 상관없이 가짜 프록시 클래스를 다른 빈에 미리 주입해둘 수 있음
+
+<img width="538" alt="image" src="https://user-images.githubusercontent.com/45463495/158394141-747c65eb-2f27-461b-bc98-4f98f3ed8a9f.png">
+
+- CGLIB라는 라이브러리로 내 클래스를 상속 받은 가짜 프록시 객체를 만들어서 주입한다.
+- 가짜 프록시 객체는 실제 요청이 오면 그때 내부에서 실제 빈을 요청하는 위임 로직이 들어있다.
+- 가짜 프록시 객체는 실제 request scope와는 관계가 없다. 그냥 가짜이고, 내부에 단순한 위임 로직만 있고, 싱글톤처럼 동작한다.
+
+**프록시 특징**
+- 프록시 객체 덕분에 클라이언트는 마치 싱글톤 빈을 사용하듯이 편리하게 request scope를 사용할 수 있다.
+- Provider를 사용하든, 프록시를 사용하든 핵심 아이디어는 진짜 객체 조회를 꼭 필요한 시점까지 지연처리 한다는 점이다.
+- 애노테이션 설정 변경만으로 원본 객체를 프록시 객체로 대체할 수 있다. 이것이 바로 다형성과 DI 컨테이너가 가진 큰 강점이다.
+- 웹 스코프가 아니라도 프록시는 사용할 수 있다.
