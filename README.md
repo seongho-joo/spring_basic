@@ -16,9 +16,9 @@
   - [`코드2`의 설계](#코드2의-설계)
 - [4. 관심사 분리](#4-관심사-분리)
   - [좋은 객체 지향 설계의 5가지 원칙의 적용](#좋은-객체-지향-설계의-5가지-원칙의-적용)
-    - [SRP(Single Responsibility Principle) 🔗](#srpsingle-responsiblilty-principle-)
+    - [SRP(Single Responsibility Principle) 🔗](#srpsingle-responsibility-principle-)
     - [DIP(Dependency Inversion Principle) 🔗](#dipdependency-inversion-principle-)
-    - [OCP(Open-Closed Principle) 🔗](#ocpopen-closed-prinicple-)
+    - [OCP(Open-Closed Principle) 🔗](#ocpopen-closed-principle-)
   - [IoC(제어의 역전), DI(의존관계 주입), 그리고 컨테이너](#ioc제어의-역전-di의존관계-주입-그리고-컨테이너)
     - [제어의 역전(Inversion of Control, IoC) 🔗](#제어의-역전inversion-of-control-ioc-)
     - [의존관계 주입(Dependency Injection, DI) 🔗](#의존관계-주입dependency-injection-di-)
@@ -44,6 +44,8 @@
 - [9. 빈 생명주기 콜백](#9-빈-생명주기-콜백)
 - [10. 빈 스코프](#10-빈-스코프)
   - [프로토타입 스코프](#프로토타입-스코프)
+    - [싱글톤 빈에서 프로토타입 빈 사용](#싱글톤-빈에서-프로토타입-빈-사용)
+  - [웹 스코프](#웹-스코프)
 </details>
 
 ---
